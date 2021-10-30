@@ -6,12 +6,12 @@
 
 A cli to browse and watch anime.
 
-This tool scrapes the site [gogoanime](https://gogoanime.pe).
+This tool scrapes the site [-](https://gogoanime.pe).
 
 ## Download
 
 ```bash
-git clone https://github.com/pystardust/ani-cli.git
+git clone https://github.com/-cli.git
 ```
 
 ## Install
