@@ -4,8 +4,8 @@
 # video_player ( needs to be able to play urls )
 player_fn="mpv"
 
-prog="ani-cli"
-logfile="${XDG_CACHE_HOME:-$HOME/.cache}/ani-hsts"
+prog="kdrama-cli"
+logfile="${XDG_CACHE_HOME:-$HOME/.cache}/kdr-hsts"
 
 c_red="\033[1;31m"
 c_green="\033[1;32m"
@@ -38,12 +38,13 @@ err () {
 	printf "$c_red%s$c_reset\n" "$*" >&2
 }
 
-search_anime () {
-	# get anime name along with its id
+search_kdrama () {
+	# get kdrama name along with its id
 	search=$(printf '%s' "$1" | tr ' ' '-' )
 	titlepattern='<a href="/category/'
 
-	curl -s "https://gogoanime.pe//search.html" \
+##	curl -s "https://kissasian.li/Search/Drama" \
+	curl -s "https://kisasian.net/?s="
 		-G \
 		-d "keyword=$search" |
 	sed -n -E '
@@ -52,8 +53,8 @@ search_anime () {
 }
 
 search_eps () {
-	# get available episodes for anime_id
-	anime_id=$1
+	# get available episodes for kdrama_id
+	kdrama_id=$1
 
 	curl -s "https://gogoanime.pe/category/$anime_id" |
 	sed -n -E '
@@ -66,7 +67,7 @@ search_eps () {
 
 get_embedded_video_link() {
 	# get the download page url
-	anime_id=$1
+	kdrama_id=$1
 	ep_no=$2
 
 	# credits to fork: https://github.com/Dink4n/ani-cli for the fix
@@ -134,7 +135,7 @@ dep_ch () {
 # get query
 get_search_query () {
 	if [ -z "$*" ]; then
-		printf "Search Anime: "
+		printf "Search K-Drama: "
 		read -r query
 	else
 		query=$*
@@ -145,23 +146,23 @@ get_search_query () {
 [ -f "$logfile" ] || : > "$logfile"
 
 #####################
-## Anime selection ##
+## K-Drama selection ##
 #####################
 
-anime_selection () {
+kdrama_selection () {
 	search_results=$*
 	menu_format_string='[%d] %s\n'
 	menu_format_string_c1="$c_blue[$c_cyan%d$c_blue] $c_reset%s\n"
 	menu_format_string_c2="$c_blue[$c_cyan%d$c_blue] $c_yellow%s$c_reset\n"
 
 	count=1
-	while read anime_id; do
+	while read kdrama_id; do
 		# alternating colors for menu
 		[ $((count % 2)) -eq 0 ] &&
 			menu_format_string=$menu_format_string_c1 ||
 			menu_format_string=$menu_format_string_c2
 
-		printf "$menu_format_string" "$count" "$anime_id"
+		printf "$menu_format_string" "$count" "$kdrama_id"
 		count=$((count+1))
 	done <<-EOF
 	$search_results
@@ -175,11 +176,11 @@ anime_selection () {
 	# Check if input is a number
 	[ "$choice" -eq "$choice" ] 2>/dev/null || die "Invalid number entered"
 
-	# Select respective anime_id
+	# Select respective kdrama_id
 	count=1
-	while read anime_id; do
+	while read kdrama_id; do
 		if [ $count -eq $choice ]; then
-			selection_id=$anime_id
+			selection_id=$kdrama_id
 			break
 		fi
 		count=$((count+1))
@@ -212,7 +213,7 @@ episode_selection () {
 }
 
 open_episode () {
-	anime_id=$1
+	kdrama_id=$1
 	episode=$2
 
 	# Cool way of clearing screen
@@ -226,7 +227,7 @@ open_episode () {
 
 	printf "Getting data for episode %d\n" $episode
 
-	embedded_video_url=$(get_embedded_video_link "$anime_id" "$episode")
+	embedded_video_url=$(get_embedded_video_link "$kdrama_id" "$episode")
 	video_url=$(get_links "$embedded_video_url")
 
 	case $video_url in
@@ -243,7 +244,7 @@ open_episode () {
 	esac
 
 	if [ $is_download -eq 0 ]; then
-		# write anime and episode number
+		# write kdrama and episode number
 		sed -E "
 			s/^${selection_id}\t[0-9]+/${selection_id}\t$((episode+1))/
 		" "$logfile" > "${logfile}.new" && mv "${logfile}.new" "$logfile"
@@ -256,7 +257,7 @@ open_episode () {
 		episode=$(printf "%03d" $episode)
 		{
 			curl -L -# -C - "$video_url" -G -e 'https://streamani.io/' \
-				-o "${anime_id}-${episode}.mp4" "$video_url" >/dev/null 2>&1 &&
+				-o "${kdrama_id}-${episode}.mp4" "$video_url" >/dev/null 2>&1 &&
 				printf "${c_green}Downloaded episode: %s${c_reset}\n" "$episode" ||
 				printf "${c_red}Download failed episode: %s${c_reset}\n" "$episode"
 		}
@@ -302,15 +303,15 @@ shift $((OPTIND - 1))
 case $scrape in
 	query)
 		get_search_query "$*"
-		search_results=$(search_anime "$query")
+		search_results=$(search_kdrama "$query")
 		[ -z "$search_results" ] && die "No search results found"
-		anime_selection "$search_results"
+		kdrama_selection "$search_results"
 		episode_selection
 		;;
 	history)
 		search_results=$(sed -n -E 's/\t[0-9]*//p' "$logfile")
 		[ -z "$search_results" ] && die "History is empty"
-		anime_selection "$search_results"
+		kdrama_selection "$search_results"
 		ep_choice_start=$(sed -n -E "s/${selection_id}\t//p" "$logfile")
 		;;
 esac
@@ -326,7 +327,7 @@ esac
 	fi
 }
 
-# add anime to history file
+# add kdrama to history file
 grep -q -w "${selection_id}" "$logfile" ||
 	printf "%s\t%d\n" "$selection_id" $((episode+1)) >> "$logfile"
 
